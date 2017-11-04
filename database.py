@@ -80,6 +80,13 @@ class Database:
                 good_rides.append(ride_id)
         return good_rides
 
+    # returns info for all ri
+    def get_active_user_rides(self, user_id):
+        return
+
+    def get_all_user_rides(self, user_id):
+        return
+
     # closes database connectin
     def close_db(self):
         self.connection.close()
