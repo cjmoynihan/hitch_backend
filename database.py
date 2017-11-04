@@ -65,23 +65,20 @@ class Database:
         self.cur.execute('DELETE FROM passengers WHERE id = ?', (id,))
         self.connection.commit()
 
-    # filters available rides based on given constraints
-    # src is the target starting location (latitude, longitude tuple)
-    # dest is the target ending location (latitude, longitude tuple)
-    # src_radius and dest_radius are respective radiuses from src and dst (miles)
-    # todo: time_precision is the number of minutes we can look around depart_time and arrive_time--set to None for 0
-    def query_rides(self, src, radius, depart_time, time_range):
+    # filters available rides based on proximity to depart_time and distance from source, destination
+    # goal_src is the target starting location (latitude, longitude tuple)
+    # goal_dest is the target ending location (latitude, longitude tuple)
+    # src_radius and dest_radius are respective radiuses from src and dst (miles) todo: update this comment
+    def query_rides(self, src, dest, radius, goal_time, time_range, use_depart=True):
         good_rides = []
-        for ride_id, ride_lat, ride_long, ride_time in \
-            self.cur.execute('SELECT ride_id, ride_lat, ride_long, depart_time FROM rides'):
-            if abs(ride_time - depart_time) <= time_range and est_dist(src, (ride_lat, ride_long)) <= radius:
+        # build query using either depart_time or arrive_time depending on use_depart
+        query = 'SELECT ride_id, src_lat, src_long, dest_lat, dest_long, {0} FROM rides'\
+            .format('depart_time' if use_depart else 'arrive_time')
+        for ride_id, ride_slat, ride_slong, ride_dlat, ride_dlong, time in self.cur.execute(query):
+            if abs(time - goal_time) <= time_range and est_dist(src, (ride_slat, ride_slong)) <= radius and \
+                    est_dist(dest, (ride_dlat, ride_dlong)) <= radius:
                 good_rides.append(ride_id)
         return good_rides
-
-    # returns list of ride_ids within *radius* miles of src(lat, long)
-    def filter_rides_by_src(self, src, radius):
-        return [ride_id for ride_id, ride_lat, ride_long in self.cur.execute('SELECT ride_id, src_lat, src_long FROM rides')
-                if est_dist(src, (ride_lat, ride_long)) <= radius]
 
     # closes database connectin
     def close_db(self):
@@ -111,14 +108,30 @@ def rows_to_str(rows):
 def get_curr_time(timezone=None):
     return datetime.now(tz=timezone)
 
+haegis = (42.387440, -72.526423)  # Haegis Mall
+dubois = (42.390045, -72.528268)  # W.E.B. DuBois
+hadley = (42.356632, -72.547779)  # Hadley Mall
+copley = (42.350230, -71.076577)  # Copley Square
+cvs = (42.377306, -72.520417)  # amherst CVS
+
+t1 = 1510388820.74 # 11/11/17 at 4:27 am
+t2 = 1510389720.74 # 11/11/17 at 4:42 am
+t3 = 1510390620.74 # 11/11/17 at 4:57 am
+t4 = 1510392420.74 # 11/11/17 at 5:27 am
+t5 = 1510406820.74 # 11/11/17 at 9:27 am
+
 test_user1 = ('user1@umass.edu', 'User1First', 'User1Last')
 test_user2 = ('user2@umass.edu', 'User2First', 'User2Last')
 test_user3 = ('user3@bu.edu', 'User3First', 'User3Last')
-test_ride1 = (1, (35, 40), (36, 40), get_curr_time().timestamp(), 5, 2.50)
-test_ride2 = (1, (39, 41), (38, 40), get_curr_time().timestamp(), 4, 1.50)
-test_ride3 = (1, (84.871, 90.0011), (85, 90), get_curr_time().timestamp(), 5, 1.00)
+test_ride1 = (1, haegis, dubois, t1, t2, 5, 2.50)
+test_ride2 = (1, haegis, hadley, t1, t3, 4, 1.50)
+test_ride3 = (2, hadley, cvs, t2, t4, 5, 1.00)
+test_ride4 = (3, hadley, copley, t1, t4, 5, 20)
 test_passenger1 = (1, 2)
 test_passenger2 = (1, 3)
+
+# def query_rides(self, src, dest, radius, goal_time, time_range, use_depart=True):
+test_query1 = (haegis, hadley, 5, t1 + 300, 500)
 
 # basic method to set up a new database with basic values. REWRITES THE DATABASE
 def test_db():
@@ -130,16 +143,12 @@ def test_db():
     db.add_ride(*test_ride1)
     db.add_ride(*test_ride2)
     db.add_ride(*test_ride3)
+    db.add_ride(*test_ride4)
     db.add_passenger(*test_passenger1)
     db.add_passenger(*test_passenger2)
     return db
 
 def test_distances():
-    haegis = (42.387440, -72.526423)  # Haegis Mall
-    dubois = (42.390045, -72.528268)  # W.E.B. DuBois
-    hadley = (42.356632, -72.547779)  # Hadley Mall
-    copley = (42.350230, -71.076577)  # Copley Square
-    cvs = (42.377306, -72.520417)  # amherst CVS
     print (est_dist(haegis, dubois))
     print (est_dist(haegis, hadley))
     print (est_dist(dubois, cvs))
@@ -147,7 +156,11 @@ def test_distances():
     print (est_dist(copley, dubois))
     print (est_dist(dubois, copley))
 
+def test_queries():
+    print (db.query_rides(*test_query1))
+
 if __name__ == '__main__':
     db = Database(db_file)
     db.print_debug()
+    test_queries()
     db.close_db()

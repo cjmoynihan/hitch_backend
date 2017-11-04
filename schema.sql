@@ -18,11 +18,11 @@ create table rides (
     total_seats int not null,
     cost float not null
 );
-CREATE INDEX sorted_slat ON rides(source_lat);
-CREATE INDEX sorted_slong ON rides(source_long);
+CREATE INDEX sorted_slat ON rides(src_lat);
+CREATE INDEX sorted_slong ON rides(src_long);
 CREATE INDEX sorted_dlat ON rides(dest_lat);
 CREATE INDEX sorted_dlong ON rides(dest_long);
-CREATE INDEX depart_time ON rides(depart_time)
+CREATE INDEX depart_time ON rides(depart_time);
 drop table if exists passengers;
 create table passengers (
     id integer unique primary key autoincrement,
