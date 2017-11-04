@@ -45,8 +45,7 @@ def format_rides(ride_ids):
                     } for (firstname, lastname, passenger_id) in map(db.get_passenger_info, ride_ids)
                 ]
             }  # More of these
-        ] for (driverFirst, driverLast, driverID, fromLat, fromLong, destLat, destLong, maxPassengers, departureTime,
-               ) in map(db.get_all_from_ride, ride_ids)
+        ] for (driverFirst, driverLast, driverID, fromLat, fromLong, destLat, destLong, maxPassengers, departureTime) in map(db.get_all_from_ride, ride_ids)
     }
     return jsonify(json_object)
 

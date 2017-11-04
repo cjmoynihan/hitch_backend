@@ -90,14 +90,14 @@ class Database:
     def get_all_from_ride(self, ride_id):
         # Needs troubleshooting
         self.cur.execute("""SELECT (firstname, lastname, user_id, src_lat, src_long, dest_lat, dest_long, total_seats,
-        depart_time) FROM users JOIN rides ON user_id WHERE ride_id = ?""", ride_id)
+        depart_time) FROM users JOIN rides ON user_id WHERE ride_id = ?""", (ride_id,))
         result = self.cur.fetchone()
         return None if not result else result[0]
 
     def get_passenger_info(self, ride_id):
         # Need troubleshooting
         self.cur.execute("""SELECT (firstname, lastname, passenger_id) FROM users JOIN passengers ON users.user_id =
-        passengers.passenger_id WHERE ride_id = ?""", ride_id)
+        passengers.passenger_id WHERE ride_id = ?""", (ride_id,))
         return self.cur.fetchall()
 
     # closes database connectin
