@@ -9,7 +9,7 @@ class Database:
     """Handle to a database."""
 
     # init database handle
-    def __init__(self, db_file):
+    def __init__(self, db_file = db_file):
         self.db_file = db_file
         self.connection = sqlite3.connect(db_file)
         # configure to return as Sqlite3 Rowfactory
