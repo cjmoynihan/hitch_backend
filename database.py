@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime, timezone, timedelta
-from math import cos, radians
+from math import cos, radians, sqrt
 
 db_file = 'hitch.db'
 
@@ -70,26 +70,18 @@ class Database:
     # dest is the target ending location (latitude, longitude tuple)
     # src_radius and dest_radius are respective radiuses from src and dst (miles)
     # todo: time_precision is the number of minutes we can look around depart_time and arrive_time--set to None for 0
-    def query_rides(self, src, dest, src_radius, dest_radius, time_range, depart_time):
-        # filtering by distance from (lat, long):
-        # - 1 deg. latitude = about 69 miles
-        # - 1 degree longitude = cosine(decimal latitude in degrees) * 55.2428 miles
-        # see dist() function for more information
-        '''Length of 1 degree of Longitude = cosine (latitude in decimal degrees) * length of degree (miles) at equator.
+    def query_rides(self, src, radius, depart_time, time_range):
+        good_rides = []
+        for ride_id, ride_lat, ride_long, ride_time in \
+            self.cur.execute('SELECT ride_id, ride_lat, ride_long, depart_time FROM rides'):
+            if abs(ride_time - depart_time) <= time_range and est_dist(src, (ride_lat, ride_long)) <= radius:
+                good_rides.append(ride_id)
+        return good_rides
 
-Convert your latitude into decimal degrees ~ 37.26383
-
-Convert your decimal degrees into radians ~ 0.79863
-
-1 degree of Longitude = ~0.79863 * 69.172 = ~ 55.2428 miles
-
-More useful information from the about.com website:
-
-Degrees of latitude are parallel so the distance between each degree remains almost constant but since degrees of longitude are farthest apart at the equator and converge at the poles, their distance varies greatly.
-
-Each degree of latitude is approximately 69 miles (111 kilometers) apart. The range varies (due to the earth's slightly ellipsoid shape) from 68.703 miles (110.567 km) at the equator to 69.407 (111.699 km) at the poles. This is convenient because each minute (1/60th of a degree) is approximately one [nautical] mile.'''
-        # self.cur.execute('SELECT * FROM rides WHERE src_lat = ? ')
-        return
+    # returns list of ride_ids within *radius* miles of src(lat, long)
+    def filter_rides_by_src(self, src, radius):
+        return [ride_id for ride_id, ride_lat, ride_long in self.cur.execute('SELECT ride_id, src_lat, src_long FROM rides')
+                if est_dist(src, (ride_lat, ride_long)) <= radius]
 
     # closes database connectin
     def close_db(self):
@@ -100,13 +92,13 @@ Each degree of latitude is approximately 69 miles (111 kilometers) apart. The ra
         print ('Rides\n{}'.format(rows_to_str(self.cur.execute('SELECT * FROM rides').fetchmany(10))))
         print ('Passengers\n{}'.format(rows_to_str(self.cur.execute('SELECT * FROM passengers').fetchmany(10))))
 
-# calculates and returns distance between two (latitude, longitude) pairs
-# we get an approximation of distance with the following formula, plugging in
-# the differences in latitude and longitude:
-# 1 deg. latitude = about 69 miles
-# 1 deg. longitude = cosine(decimal latitude in degrees) * 55.2428 miles
-def dist(location1, location2):
-    return abs(69 * (location2[0] - location1[0]) + 55.2428 * cos(location2[1] - location1[1]))
+# calculates and returns *estimated* distance between two (latitude, longitude) pairs
+# errors will grow large for points that are far apart
+# uses simple euclidean distance between the points, multiplied by the length of one degree (110.25).
+# length of a degree of longitude depends on latitude, so adjust by multiplying long by cos(lat)'
+def est_dist(location1, location2):  # todo: testing
+    return 110.25 * sqrt((location2[0] - location1[0])**2 +
+                         cos(radians(location1[0])) * ((location2[1] - location1[1]) ** 2))
 
 # str() method for list of sqlite3.Row objects
 def rows_to_str(rows):
@@ -142,8 +134,20 @@ def test_db():
     db.add_passenger(*test_passenger2)
     return db
 
+def test_distances():
+    haegis = (42.387440, -72.526423)  # Haegis Mall
+    dubois = (42.390045, -72.528268)  # W.E.B. DuBois
+    hadley = (42.356632, -72.547779)  # Hadley Mall
+    copley = (42.350230, -71.076577)  # Copley Square
+    cvs = (42.377306, -72.520417)  # amherst CVS
+    print (est_dist(haegis, dubois))
+    print (est_dist(haegis, hadley))
+    print (est_dist(dubois, cvs))
+    print (est_dist(dubois, hadley))
+    print (est_dist(copley, dubois))
+    print (est_dist(dubois, copley))
+
 if __name__ == '__main__':
-    # test_db()
     db = Database(db_file)
     db.print_debug()
     db.close_db()
