@@ -63,17 +63,21 @@ def rides():
     empty_seats (true by default) Filters possible rides
     """
     # Pull out the get calls
-    data = request.args
+    data = dict(request.args)
     data['start_time'] = data.get('start_time', datetime.now())
-    data['goal_time'] = data.get('goal_time', data['time_min']+timedelta(hours=2))
+    data['goal_time'] = data.get('goal_time', data['start_time']+timedelta(hours=2))
     # Get the difference between start and end time. Assume 2 hours past if nothing given.
-    data['time_range'] = data['goal_time'] - data['time_min']
+    data['time_range'] = data['goal_time'] - data['start_time']
     if 'source' in data.keys():
         data['latitude'], data['longitude'] = get_from_source(data['source']) # Need to implement the get_from_source
     if all(x in data.keys() for x in ('latitude', 'longitude', 'radius', 'dest')):
         # Need lat, long, radius and dest to get anything meaninful out of this
         data['src'] = (data['latitude'], data['longitude'])
         return format_rides(db.query_rides(**data))
+    # Got to return something else, if I don't have this information
+    else:
+        return format_rides((ride_id,) for ride_id in db.cur.execute("SELECT (ride_id) FROM rides").fetchall())
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5002)
+#    app.run(host='0.0.0.0', port=5002)
+    app.run(host='127.0.0.1')
