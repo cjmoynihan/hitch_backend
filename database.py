@@ -31,10 +31,13 @@ class Database:
         """
         Radius is in miles
         """
-        self.cur.execute("""SELECT firstname, lastname, users.user_id, src_lat, src_long, dest_lat, dest_long, total_seats,
-        depart_time FROM users JOIN rides ON users.user_id = rides.user_id""")
-        return [selection for selection in self.cur if est_dist(latitude, selection.src_lat) <= radius and
-                est_dist(longitude, selection.src_long) <= radius]
+        with open('out.txt', 'w') as f:
+            f.write(str(radius))
+        radius = float(radius)
+        latitude = float(latitude)
+        longitude = float(longitude)
+        self.cur.execute("""SELECT ride_id, src_lat, src_long FROM rides""")
+        return [ride_id for (ride_id, src_lat, src_long) in self.cur if est_dist((latitude,longitude), (float(src_lat), float(src_long))) <= radius]
 
     # returns whether given email is registered in the user database
     def has_email(self, email):
@@ -130,6 +133,7 @@ class Database:
 # uses simple euclidean distance between the points, multiplied by the length of one degree (110.25).
 # length of a degree of longitude depends on latitude, so adjust by multiplying long by cos(lat)'
 def est_dist(location1, location2):  # todo: testing
+    # Uses (lat, long)
     return 110.25 * sqrt((location2[0] - location1[0])**2 +
                          cos(radians(location1[0])) * ((location2[1] - location1[1]) ** 2))
 
