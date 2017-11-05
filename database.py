@@ -27,7 +27,7 @@ class Database:
     def get_id(self, email):
         return self.cur.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()[0]
 
-    def find_nearby_rides(self, radius, latitude, longitude):
+    def find_nearby_rides(self, radius, latitude, longitude, **kwargs):
         """
         Radius is in miles
         """
@@ -78,7 +78,7 @@ class Database:
     # goal_src is the target starting location (latitude, longitude tuple)
     # goal_dest is the target ending location (latitude, longitude tuple)
     # src_radius and dest_radius are respective radiuses from src and dst (miles) todo: update this comment
-    def query_rides(self, src, dest, radius, goal_time, time_range, use_depart=True):
+    def query_rides(self, src, dest, radius, goal_time, time_range, use_depart=True, **kwargs):
         good_rides = []
         # build query using either depart_time or arrive_time depending on use_depart
         query = 'SELECT ride_id, src_lat, src_long, dest_lat, dest_long, {0} FROM rides'\
