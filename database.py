@@ -11,7 +11,7 @@ class Database:
     # init database handle
     def __init__(self, db_file = db_file):
         self.db_file = db_file
-        self.connection = sqlite3.connect(db_file)
+        self.connection = sqlite3.connect(db_file, check_same_thread=False)
         # configure to return as Sqlite3 Rowfactory
         self.connection.row_factory = sqlite3.Row
         self.cur = self.connection.cursor()
@@ -89,16 +89,20 @@ class Database:
 
     def get_all_from_ride(self, ride_id):
         # Needs troubleshooting
-        self.cur.execute("""SELECT (firstname, lastname, user_id, src_lat, src_long, dest_lat, dest_long, total_seats,
-        depart_time) FROM users JOIN rides ON user_id WHERE ride_id = ?""", (ride_id,))
-        result = self.cur.fetchone()
-        return None if not result else result[0]
+        self.cur.execute("""SELECT firstname, lastname, users.user_id, src_lat, src_long, dest_lat, dest_long, total_seats,
+        depart_time FROM users JOIN rides ON users.user_id = rides.user_id WHERE ride_id = ?""", (ride_id,))
+        return list(self.cur.fetchone())
+#        result = self.cur.fetchone()
+#        return list() if not result else result[0]
 
     def get_passenger_info(self, ride_id):
         # Need troubleshooting
-        self.cur.execute("""SELECT (firstname, lastname, passenger_id) FROM users JOIN passengers ON users.user_id =
+        self.cur.execute("""SELECT firstname, lastname, passenger_id FROM users JOIN passengers ON users.user_id =
         passengers.passenger_id WHERE ride_id = ?""", (ride_id,))
         return self.cur.fetchall()
+
+    def get_driver_ids(self):
+        return self.cur.execute("SELECT (ride_id) FROM rides").fetchall()
 
     # closes database connectin
     def close_db(self):

@@ -18,6 +18,8 @@ def format_rides(ride_ids):
     """
     Turns the rides given from a query into a viewable json object
     """
+    with open("/var/www/hitch_backend/out.txt", 'w') as f:
+        f.write(str(ride_ids))
     # Logic goes here
     json_object = {
         'Ride': [
@@ -39,10 +41,10 @@ def format_rides(ride_ids):
                 'departureTime': departureTime,
                 'passengers': [
                     {
-                        'firstName': firstname,
-                        'lastName': lastname,
-                        'passengerID': passenger_id,
-                    } for (firstname, lastname, passenger_id) in map(db.get_passenger_info, ride_ids)
+                        'firstName': row['firstname'],
+                        'lastName': row['lastname'],
+                        'passengerID': row['passenger_id'],
+                    } for (row,) in filter(bool, map(db.get_passenger_info, ride_ids))
                 ]
             }  # More of these
         ] for (driverFirst, driverLast, driverID, fromLat, fromLong, destLat, destLong, maxPassengers, departureTime) in map(db.get_all_from_ride, ride_ids)
@@ -75,7 +77,7 @@ def rides():
         return format_rides(db.query_rides(**data))
     # Got to return something else, if I don't have this information
     else:
-        return format_rides((ride_id,) for ride_id in db.cur.execute("SELECT (ride_id) FROM rides").fetchall())
+        return format_rides([ride_id for (ride_id,) in db.get_driver_ids()])
 
 if __name__ == '__main__':
 #    app.run(host='0.0.0.0', port=5002)
