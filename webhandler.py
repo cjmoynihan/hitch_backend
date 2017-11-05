@@ -102,7 +102,6 @@ def rides():
     else:
         return format_rides([ride_id for (ride_id,) in db.get_driver_ids()])
 
-
 if __name__ == '__main__':
 #    app.run(host='0.0.0.0', port=5002)
     app.run(host='127.0.0.1')
