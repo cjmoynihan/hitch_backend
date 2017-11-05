@@ -1,6 +1,6 @@
 __author__ = 'cj'
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
 app = Flask(__name__)
 from database import Database
 db = Database()
@@ -12,14 +12,12 @@ def get_from_source(source):
     Given a real place, as in something that Google Maps can understand, return latitude and longitude
     """
     # Logic goes here
-    pass
+    return source
 
 def format_rides(ride_ids):
     """
     Turns the rides given from a query into a viewable json object
     """
-    with open("/var/www/hitch_backend/out.txt", 'w') as f:
-        f.write(str(ride_ids))
     # Logic goes here
     json_object = {
         'Ride': [
@@ -47,9 +45,34 @@ def format_rides(ride_ids):
                     } for (row,) in filter(bool, map(db.get_passenger_info, ride_ids))
                 ]
             }  # More of these
-        ] for (driverFirst, driverLast, driverID, fromLat, fromLong, destLat, destLong, maxPassengers, departureTime) in map(db.get_all_from_ride, ride_ids)
+        ] for (driverFirst, driverLast, driverID, fromLat, fromLong, destLat, destLong, maxPassengers, departureTime) in
+        map(db.get_all_from_ride, ride_ids)
     }
     return jsonify(json_object)
+
+@app.route('/add_account', methods=['GET'])
+def add_account():
+    """
+    Adds the user to the account
+    Expects to be passed 'email', 'firstname', and 'lastname'
+    """
+    data = dict(request.args)
+    headers = ('email', 'firstname', 'lastname')
+    json_object = {header: data.get(header) for header in headers}
+    if not all(json_object.values()):
+        abort(406)  # Expected user info, didn't get it
+    if db.has_email(data['email']):
+        abort(409)  # Conflict with other email
+    db.add_user(**json_object)
+    return jsonify(json_object)
+
+@app.route('/user/<email>')
+def get_user_info(email):
+    result = db.user_info(email)
+    headers = ('email', 'firstname', 'lastname')
+    if not result:
+        abort(406)  # Email doesn't exist
+    return jsonify(dict(headers, result))
 
 @app.route('/rides', methods=['GET'])
 def rides():
@@ -70,7 +93,7 @@ def rides():
     # Get the difference between start and end time. Assume 2 hours past if nothing given.
     data['time_range'] = data['goal_time'] - data['start_time']
     if 'source' in data.keys():
-        data['latitude'], data['longitude'] = get_from_source(data['source']) # Need to implement the get_from_source
+        data['latitude'], data['longitude'] = get_from_source(data['source'])  # Need to implement the get_from_source
     if all(x in data.keys() for x in ('latitude', 'longitude', 'radius', 'dest')):
         # Need lat, long, radius and dest to get anything meaninful out of this
         data['src'] = (data['latitude'], data['longitude'])
@@ -78,6 +101,7 @@ def rides():
     # Got to return something else, if I don't have this information
     else:
         return format_rides([ride_id for (ride_id,) in db.get_driver_ids()])
+
 
 if __name__ == '__main__':
 #    app.run(host='0.0.0.0', port=5002)

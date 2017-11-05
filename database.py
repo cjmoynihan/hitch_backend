@@ -7,21 +7,21 @@ db_file = 'hitch.db'
 # todo: how storing+accessing latitude and longitude?
 class Database:
     """Handle to a database."""
-
     # init database handle
     def __init__(self, db_file = db_file):
         self.db_file = db_file
+        # check_same_thread = False so that we can use multi-threading
         self.connection = sqlite3.connect(db_file, check_same_thread=False)
         # configure to return as Sqlite3 Rowfactory
         self.connection.row_factory = sqlite3.Row
         self.cur = self.connection.cursor()
 
     # runs the script in given schema_file to instantiate (or overwrite) the database
-    def init_db(self, schema_file):
+    def _init_db(self):
         with open('schema.sql', mode='r') as f:
             self.cur.executescript(f.read())
         self.connection.commit()
-        print ('Initialized Database')
+        print('Initialized Database')
 
     # returns id for given email
     def get_id(self, email):
@@ -104,6 +104,9 @@ class Database:
     def get_driver_ids(self):
         return self.cur.execute("SELECT (ride_id) FROM rides").fetchall()
 
+    def user_info(self, email):
+        return self.cur.execute("SELECT email, firstname, lastname FROM users WHERE email = ?", (email,)).fetchone()
+
     # closes database connectin
     def close_db(self):
         self.connection.close()
@@ -160,7 +163,7 @@ test_query1 = (haegis, hadley, 5, t1 + 300, 500)
 # basic method to set up a new database with basic values. REWRITES THE DATABASE
 def test_db():
     db = Database(db_file)
-    db.init_db('schema.sql')
+    db._init_db()
     db.add_user(*test_user1)
     db.add_user(*test_user2)
     db.add_user(*test_user3)
