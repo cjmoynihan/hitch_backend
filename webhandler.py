@@ -99,6 +99,8 @@ def rides():
         data['src'] = (data['latitude'], data['longitude'])
         return format_rides(db.query_rides(**data))
     # Got to return something else, if I don't have this information
+    elif all(x in data.keys() for x in ('latitude', 'longitude', 'radius')):
+        return format_rides(db.find_nearby_rides(**data))
     else:
         return format_rides([ride_id for (ride_id,) in db.get_driver_ids()])
 

@@ -27,6 +27,15 @@ class Database:
     def get_id(self, email):
         return self.cur.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()[0]
 
+    def find_nearby_rides(self, radius, latitude, longitude):
+        """
+        Radius is in miles
+        """
+        self.cur.execute("""SELECT firstname, lastname, users.user_id, src_lat, src_long, dest_lat, dest_long, total_seats,
+        depart_time FROM users JOIN rides ON users.user_id = rides.user_id""")
+        return [selection for selection in self.cur if est_dist(latitude, selection.src_lat) <= radius and
+                est_dist(longitude, selection.src_long) <= radius]
+
     # returns whether given email is registered in the user database
     def has_email(self, email):
         return bool(self.cur.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone())
